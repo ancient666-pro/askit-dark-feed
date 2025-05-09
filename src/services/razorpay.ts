@@ -4,6 +4,8 @@ import { firebaseService } from "./firebase";
 
 class RazorpayService {
   private razorpayLoaded = false;
+  // Replace with your actual test key - this is a publishable key so it's fine in the frontend
+  private readonly RAZORPAY_KEY = "rzp_test_SCBtEItlo6cdZj";
 
   async loadRazorpay(): Promise<boolean> {
     if (this.razorpayLoaded) return true;
@@ -40,7 +42,7 @@ class RazorpayService {
       const { orderId, amount } = await this.createOrder(pollId);
       
       const options = {
-        key: "rzp_test_YOUR_KEY_HERE", // Replace with actual test key in production
+        key: this.RAZORPAY_KEY,
         amount,
         currency: "INR",
         name: "AskIt",
@@ -65,6 +67,11 @@ class RazorpayService {
         theme: {
           color: "#9b87f5",
         },
+        modal: {
+          ondismiss: function() {
+            toast.info("Payment canceled");
+          }
+        }
       };
 
       // @ts-ignore - Razorpay is loaded via script
