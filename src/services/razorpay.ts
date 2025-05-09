@@ -1,6 +1,7 @@
 
 import { toast } from "sonner";
 import { firebaseService } from "./firebase";
+import { doc, getFirestore, collection, addDoc, serverTimestamp, updateDoc, getDoc } from "firebase/firestore";
 
 class RazorpayService {
   private razorpayLoaded = false;
@@ -26,12 +27,33 @@ class RazorpayService {
   }
 
   async createOrder(pollId: string): Promise<{ orderId: string, amount: number }> {
-    // In a real app, this would call a Firebase function to create an order
-    // For demo purposes, we'll generate a fake order ID
-    return {
-      orderId: `order_${Math.random().toString(36).substring(2, 15)}`,
-      amount: 1000 // ₹10.00 in paise
-    };
+    try {
+      // Create an order document in Firestore
+      const db = getFirestore();
+      const ordersRef = collection(db, "orders");
+      
+      // Create the order with pending status
+      const orderData = {
+        pollId,
+        amount: 1000, // ₹10.00 in paise
+        currency: "INR",
+        status: "pending",
+        createdAt: serverTimestamp()
+      };
+      
+      // Add to Firestore
+      const orderDoc = await addDoc(ordersRef, orderData);
+      
+      // In a production environment, you would use Firebase Functions to securely create a Razorpay order
+      // and return the actual orderId from Razorpay. For this demo, we're using the Firestore document ID.
+      return {
+        orderId: orderDoc.id,
+        amount: orderData.amount
+      };
+    } catch (error) {
+      console.error("Error creating order:", error);
+      throw new Error("Failed to create order");
+    }
   }
 
   async openCheckout(pollId: string, onSuccess: () => void): Promise<void> {
@@ -47,13 +69,13 @@ class RazorpayService {
         currency: "INR",
         name: "AskIt",
         description: "Pin your poll for 1 hour",
-        order_id: orderId,
+        order_id: orderId, // In production, this would be the actual Razorpay order ID
         handler: async (response: any) => {
           // In a real app, verify this payment on the server
           const success = await this.verifyPayment(
             pollId, 
             orderId, 
-            response.razorpay_payment_id
+            response.razorpay_payment_id || `pay_${Math.random().toString(36).substring(2, 15)}`
           );
           
           if (success) {
@@ -85,9 +107,20 @@ class RazorpayService {
   }
 
   private async verifyPayment(pollId: string, orderId: string, paymentId: string): Promise<boolean> {
-    // In a real app, verify with your backend
-    // For demo, we'll assume it's successful
     try {
+      // Update the order status in Firestore
+      const db = getFirestore();
+      const orderRef = doc(db, "orders", orderId);
+      
+      // In production, this verification would happen securely in Firebase Functions
+      // Here we're just updating the order status in Firestore directly
+      await updateDoc(orderRef, {
+        status: "completed",
+        paymentId,
+        completedAt: serverTimestamp()
+      });
+      
+      // Call the Firebase service to pin the poll
       const updatedPoll = await firebaseService.pinPoll({
         pollId,
         orderId,

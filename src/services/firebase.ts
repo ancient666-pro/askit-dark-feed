@@ -1,10 +1,38 @@
 
 import { toast } from "sonner";
 import { Poll, VoteData, PinPollData } from "@/types/poll";
+import { initializeApp } from "firebase/app";
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  getDocs, 
+  getDoc, 
+  setDoc, 
+  addDoc, 
+  updateDoc, 
+  query, 
+  orderBy, 
+  serverTimestamp,
+  Timestamp,
+  where
+} from "firebase/firestore";
 
-// Mock Firebase Firestore implementation
+// Firebase configuration - replace with your own Firebase project config
+const firebaseConfig = {
+  apiKey: "AIzaSyD_VG7PJcVyO2CHIUHrpn11MeUX1X48MuE",
+  authDomain: "askit-polls.firebaseapp.com",
+  projectId: "askit-polls",
+  storageBucket: "askit-polls.appspot.com",
+  messagingSenderId: "745819241844",
+  appId: "1:745819241844:web:ac4ad8f7e6303c8b9c681d"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 class FirebaseService {
-  private polls: Poll[] = [];
   private deviceId: string;
 
   constructor() {
@@ -13,35 +41,6 @@ class FirebaseService {
     if (!localStorage.getItem("deviceId")) {
       localStorage.setItem("deviceId", this.deviceId);
     }
-
-    // Sample data for demonstration
-    this.polls = [
-      {
-        id: "1",
-        question: "Should remote work be the new normal?",
-        type: "yesNo",
-        createdAt: Date.now() - 3600000,
-        isPinned: true,
-        pinExpiresAt: Date.now() + 3600000,
-        votes: { yes: 42, no: 18 }
-      },
-      {
-        id: "2",
-        question: "Which is better for productivity?",
-        type: "optionAB",
-        createdAt: Date.now() - 7200000,
-        isPinned: false,
-        votes: { optionA: 24, optionB: 31 }
-      },
-      {
-        id: "3",
-        question: "Do you prefer dark mode over light mode?",
-        type: "yesNo",
-        createdAt: Date.now() - 10800000,
-        isPinned: false,
-        votes: { yes: 76, no: 12 }
-      }
-    ];
   }
 
   private generateDeviceId(): string {
@@ -49,80 +48,238 @@ class FirebaseService {
   }
 
   async getPolls(): Promise<Poll[]> {
-    // Sort by pin status (pinned first) then by creation time (newest first)
-    return [...this.polls].sort((a, b) => {
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      return b.createdAt - a.createdAt;
-    });
+    try {
+      // First get all polls
+      const pollsRef = collection(db, "polls");
+      const querySnapshot = await getDocs(pollsRef);
+      
+      if (querySnapshot.empty) {
+        // If no polls exist, let's create some sample ones
+        await this.createSamplePolls();
+        return this.getPolls();
+      }
+      
+      // Convert the documents to Poll objects
+      const polls = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          question: data.question,
+          type: data.type,
+          createdAt: data.createdAt.toMillis(),
+          isPinned: data.isPinned || false,
+          pinExpiresAt: data.pinExpiresAt?.toMillis() || null,
+          votes: data.votes
+        } as Poll;
+      });
+      
+      // Sort by pin status (pinned first) then by creation time (newest first)
+      return polls.sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return b.createdAt - a.createdAt;
+      });
+    } catch (error) {
+      console.error("Error getting polls:", error);
+      toast.error("Failed to fetch polls");
+      return [];
+    }
+  }
+
+  private async createSamplePolls(): Promise<void> {
+    try {
+      const pollsRef = collection(db, "polls");
+      
+      const samplePolls = [
+        {
+          question: "Should remote work be the new normal?",
+          type: "yesNo",
+          createdAt: Timestamp.fromMillis(Date.now() - 3600000),
+          isPinned: true,
+          pinExpiresAt: Timestamp.fromMillis(Date.now() + 3600000),
+          votes: { yes: 42, no: 18 }
+        },
+        {
+          question: "Which is better for productivity?",
+          type: "optionAB",
+          createdAt: Timestamp.fromMillis(Date.now() - 7200000),
+          isPinned: false,
+          votes: { optionA: 24, optionB: 31 }
+        },
+        {
+          question: "Do you prefer dark mode over light mode?",
+          type: "yesNo",
+          createdAt: Timestamp.fromMillis(Date.now() - 10800000),
+          isPinned: false,
+          votes: { yes: 76, no: 12 }
+        }
+      ];
+      
+      for (const poll of samplePolls) {
+        await addDoc(pollsRef, poll);
+      }
+      
+      console.log("Sample polls created successfully");
+    } catch (error) {
+      console.error("Error creating sample polls:", error);
+    }
   }
 
   async createPoll(question: string, type: "yesNo" | "optionAB"): Promise<Poll> {
-    const newPoll: Poll = {
-      id: Math.random().toString(36).substring(2, 10),
-      question,
-      type,
-      createdAt: Date.now(),
-      isPinned: false,
-      votes: type === "yesNo" ? { yes: 0, no: 0 } : { optionA: 0, optionB: 0 }
-    };
-    
-    this.polls.unshift(newPoll);
-    return newPoll;
+    try {
+      const pollsRef = collection(db, "polls");
+      
+      const newPoll = {
+        question,
+        type,
+        createdAt: serverTimestamp(),
+        isPinned: false,
+        votes: type === "yesNo" ? { yes: 0, no: 0 } : { optionA: 0, optionB: 0 }
+      };
+      
+      const docRef = await addDoc(pollsRef, newPoll);
+      
+      // We need to get the actual document to include the server timestamp
+      const docSnap = await getDoc(docRef);
+      const data = docSnap.data();
+      
+      return {
+        id: docRef.id,
+        question,
+        type,
+        createdAt: data?.createdAt?.toMillis() || Date.now(),
+        isPinned: false,
+        votes: type === "yesNo" ? { yes: 0, no: 0 } : { optionA: 0, optionB: 0 }
+      };
+    } catch (error) {
+      console.error("Error creating poll:", error);
+      toast.error("Failed to create poll");
+      throw error;
+    }
   }
 
   async votePoll({ pollId, vote }: VoteData): Promise<Poll | null> {
-    const votedPolls = localStorage.getItem("votedPolls") ? 
-      JSON.parse(localStorage.getItem("votedPolls") || "{}") : {};
-    
-    if (votedPolls[pollId]) {
-      toast.error("You've already voted on this poll");
+    try {
+      const votedPolls = localStorage.getItem("votedPolls") ? 
+        JSON.parse(localStorage.getItem("votedPolls") || "{}") : {};
+      
+      if (votedPolls[pollId]) {
+        toast.error("You've already voted on this poll");
+        return null;
+      }
+      
+      const pollRef = doc(db, "polls", pollId);
+      const pollSnap = await getDoc(pollRef);
+      
+      if (!pollSnap.exists()) {
+        toast.error("Poll not found");
+        return null;
+      }
+      
+      const pollData = pollSnap.data();
+      const updatedVotes = { ...pollData.votes };
+      
+      // Update vote count
+      if (updatedVotes[vote] !== undefined) {
+        updatedVotes[vote] = (updatedVotes[vote] || 0) + 1;
+      }
+      
+      // Update poll in Firestore
+      await updateDoc(pollRef, { votes: updatedVotes });
+      
+      // Mark poll as voted for this device
+      votedPolls[pollId] = true;
+      localStorage.setItem("votedPolls", JSON.stringify(votedPolls));
+      
+      const updatedPoll = {
+        id: pollId,
+        question: pollData.question,
+        type: pollData.type,
+        createdAt: pollData.createdAt.toMillis(),
+        isPinned: pollData.isPinned || false,
+        pinExpiresAt: pollData.pinExpiresAt?.toMillis() || null,
+        votes: updatedVotes
+      };
+      
+      return updatedPoll;
+    } catch (error) {
+      console.error("Error voting on poll:", error);
+      toast.error("Failed to record vote");
       return null;
     }
-    
-    const pollIndex = this.polls.findIndex(p => p.id === pollId);
-    if (pollIndex === -1) return null;
-    
-    const poll = {...this.polls[pollIndex]};
-    
-    // Update vote count
-    if (poll.votes[vote] !== undefined) {
-      poll.votes[vote]!++;
-    }
-    
-    // Update poll in array
-    this.polls[pollIndex] = poll;
-    
-    // Mark poll as voted for this device
-    votedPolls[pollId] = true;
-    localStorage.setItem("votedPolls", JSON.stringify(votedPolls));
-    
-    return poll;
   }
 
-  async pinPoll({ pollId }: PinPollData): Promise<Poll | null> {
-    const pollIndex = this.polls.findIndex(p => p.id === pollId);
-    if (pollIndex === -1) return null;
-    
-    const updatedPoll = {
-      ...this.polls[pollIndex],
-      isPinned: true,
-      pinExpiresAt: Date.now() + 3600000 // 1 hour from now
-    };
-    
-    this.polls[pollIndex] = updatedPoll;
-    return updatedPoll;
-  }
-
-  // In a real app, this would clean expired pins periodically
-  async cleanExpiredPins(): Promise<void> {
-    const now = Date.now();
-    this.polls = this.polls.map(poll => {
-      if (poll.isPinned && poll.pinExpiresAt && poll.pinExpiresAt < now) {
-        return { ...poll, isPinned: false };
+  async pinPoll({ pollId, orderId, paymentId }: PinPollData): Promise<Poll | null> {
+    try {
+      const pollRef = doc(db, "polls", pollId);
+      const pollSnap = await getDoc(pollRef);
+      
+      if (!pollSnap.exists()) {
+        toast.error("Poll not found");
+        return null;
       }
-      return poll;
-    });
+      
+      // Create payment record in Firestore
+      const paymentRef = collection(db, "payments");
+      await addDoc(paymentRef, {
+        pollId,
+        orderId,
+        paymentId,
+        amount: 1000, // ₹10.00 in paise
+        createdAt: serverTimestamp(),
+        status: "completed"
+      });
+      
+      // Update poll with pinned status
+      const pinExpiresAt = Timestamp.fromMillis(Date.now() + 3600000); // 1 hour from now
+      await updateDoc(pollRef, {
+        isPinned: true,
+        pinExpiresAt
+      });
+      
+      // Get updated poll data
+      const updatedPollSnap = await getDoc(pollRef);
+      const updatedPollData = updatedPollSnap.data();
+      
+      return {
+        id: pollId,
+        question: updatedPollData.question,
+        type: updatedPollData.type,
+        createdAt: updatedPollData.createdAt.toMillis(),
+        isPinned: true,
+        pinExpiresAt: pinExpiresAt.toMillis(),
+        votes: updatedPollData.votes
+      };
+    } catch (error) {
+      console.error("Error pinning poll:", error);
+      toast.error("Failed to pin poll");
+      return null;
+    }
+  }
+
+  async cleanExpiredPins(): Promise<void> {
+    try {
+      const now = Timestamp.now();
+      const pollsRef = collection(db, "polls");
+      
+      // Query for pinned polls with expired pins
+      const q = query(
+        pollsRef,
+        where("isPinned", "==", true),
+        where("pinExpiresAt", "<", now)
+      );
+      
+      const expiredPinsSnapshot = await getDocs(q);
+      
+      // Update each expired pin
+      expiredPinsSnapshot.forEach(async (document) => {
+        await updateDoc(doc(db, "polls", document.id), {
+          isPinned: false
+        });
+      });
+    } catch (error) {
+      console.error("Error cleaning expired pins:", error);
+    }
   }
 
   hasVoted(pollId: string): boolean {
