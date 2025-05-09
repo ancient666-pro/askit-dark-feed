@@ -33,7 +33,7 @@
 
     --border: 240 10% 20%;
     --input: 240 10% 20%;
-    --ring: 240 4.9% 83.9%;
+    --ring: 255 60% 75%;
 
     --radius: 0.5rem;
   }
@@ -55,7 +55,7 @@
   }
   
   .poll-card-shadow {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(155, 135, 245, 0.15);
   }
   
   .poll-option {

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Header from "@/components/layout/Header";
 import PollCard from "@/components/polls/PollCard";
+import AnimatedFireIcon from "@/components/ui/AnimatedFireIcon";
 import { Poll } from "@/types/poll";
 import { firebaseService } from "@/services/firebase";
 import { Loader2 } from "lucide-react";
@@ -41,7 +42,7 @@ const TrendingPolls = () => {
       
       <main className="flex-1 px-4 py-6 max-w-3xl mx-auto w-full">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold">Trending Polls</h1>
+          <h1 className="text-2xl font-semibold text-primary">Trending Polls</h1>
           <p className="text-muted-foreground">Vote on community polls or create your own</p>
         </div>
         
@@ -51,12 +52,14 @@ const TrendingPolls = () => {
           </div>
         ) : polls.length > 0 ? (
           <div className="space-y-5">
-            {polls.map((poll) => (
-              <PollCard 
-                key={poll.id} 
-                poll={poll} 
-                onPollUpdate={handlePollUpdate}
-              />
+            {polls.map((poll, index) => (
+              <div key={poll.id} className="relative">
+                {index === 0 && <AnimatedFireIcon />}
+                <PollCard 
+                  poll={poll} 
+                  onPollUpdate={handlePollUpdate}
+                />
+              </div>
             ))}
           </div>
         ) : (

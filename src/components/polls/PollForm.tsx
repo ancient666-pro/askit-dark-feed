@@ -8,7 +8,10 @@ import { firebaseService } from "@/services/firebase";
 import { Poll } from "@/types/poll";
 import PollTypeToggle from "@/components/ui/PollTypeToggle";
 import RazorpayModal from "@/components/ui/RazorpayModal";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { Flame } from "lucide-react";
 
 const PollForm = () => {
   const navigate = useNavigate();
@@ -17,6 +20,7 @@ const PollForm = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [showRazorpayModal, setShowRazorpayModal] = useState(false);
   const [createdPoll, setCreatedPoll] = useState<Poll | null>(null);
+  const [boostPoll, setBoostPoll] = useState(false);
   
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     // Limit to 280 characters (like X/Twitter)
@@ -40,8 +44,13 @@ const PollForm = () => {
       const newPoll = await firebaseService.createPoll(question.trim(), pollType);
       
       setCreatedPoll(newPoll);
-      setShowRazorpayModal(true);
-      toast.success("Poll created successfully!");
+      
+      if (boostPoll) {
+        setShowRazorpayModal(true);
+      } else {
+        toast.success("Poll created successfully!");
+        navigate("/");
+      }
     } catch (error) {
       console.error("Error creating poll:", error);
       toast.error("Failed to create poll");
@@ -75,6 +84,18 @@ const PollForm = () => {
             </div>
             
             <PollTypeToggle isYesNo={isYesNo} onChange={setIsYesNo} />
+            
+            <div className="flex items-center space-x-2 pt-2">
+              <Switch
+                id="boost-poll"
+                checked={boostPoll}
+                onCheckedChange={setBoostPoll}
+              />
+              <Label htmlFor="boost-poll" className="flex items-center gap-1.5">
+                <Flame className="h-4 w-4 text-amber-400" />
+                <span>Boost this poll (₹10)</span>
+              </Label>
+            </div>
             
             <div className="pt-2">
               <Button 
