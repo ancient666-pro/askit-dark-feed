@@ -20,12 +20,12 @@ import {
 
 // Firebase configuration - replace with your own Firebase project config
 const firebaseConfig = {
-  apiKey: "AIzaSyD_VG7PJcVyO2CHIUHrpn11MeUX1X48MuE",
-  authDomain: "askit-polls.firebaseapp.com",
-  projectId: "askit-polls",
-  storageBucket: "askit-polls.appspot.com",
-  messagingSenderId: "745819241844",
-  appId: "1:745819241844:web:ac4ad8f7e6303c8b9c681d"
+  apiKey: "YOUR_API_KEY", // Replace with your Firebase API Key
+  authDomain: "YOUR_AUTH_DOMAIN", // Replace with your Firebase Auth Domain
+  projectId: "YOUR_PROJECT_ID", // Replace with your Firebase Project ID
+  storageBucket: "YOUR_STORAGE_BUCKET", // Replace with your Firebase Storage Bucket
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Replace with your Firebase Messaging Sender ID
+  appId: "YOUR_APP_ID" // Replace with your Firebase App ID
 };
 
 // Initialize Firebase
