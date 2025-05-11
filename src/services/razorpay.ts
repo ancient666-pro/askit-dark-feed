@@ -1,14 +1,14 @@
-
 import { toast } from "sonner";
 import { doc, getFirestore, collection, addDoc, serverTimestamp, updateDoc, getDoc } from "firebase/firestore";
 
 class RazorpayService {
   private razorpayLoaded = false;
-  // Replace with your actual test key - this is a publishable key so it's fine in the frontend
-  private readonly RAZORPAY_KEY = "rzp_test_SCBtEItlo6cdZj";
-  private readonly API_URL = process.env.NODE_ENV === 'production' 
-    ? 'https://your-production-url.vercel.app/api' 
-    : 'http://localhost:3000/api';
+  // Use environment variable for the publishable Razorpay key
+  private readonly RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_SCBtEItlo6cdZj";
+  private readonly API_URL = import.meta.env.VITE_API_URL || 
+    (process.env.NODE_ENV === 'production' 
+      ? 'https://your-production-url.vercel.app/api' 
+      : 'http://localhost:3000/api');
 
   async loadRazorpay(): Promise<boolean> {
     if (this.razorpayLoaded) return true;

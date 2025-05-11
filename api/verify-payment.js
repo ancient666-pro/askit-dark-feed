@@ -28,8 +28,7 @@ module.exports = async (req, res) => {
     }
 
     // Verify the payment signature
-    const secret = process.env.RAZORPAY_KEY_SECRET || 'dRlwWLFWc7dhZbxGPzRBfLFb
-';
+    const secret = process.env.RAZORPAY_KEY_SECRET;
     const generated_signature = crypto
       .createHmac('sha256', secret)
       .update(razorpay_order_id + '|' + razorpay_payment_id)
