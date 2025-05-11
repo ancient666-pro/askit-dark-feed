@@ -1,12 +1,14 @@
 
 import { toast } from "sonner";
-import { firebaseService } from "./firebase";
 import { doc, getFirestore, collection, addDoc, serverTimestamp, updateDoc, getDoc } from "firebase/firestore";
 
 class RazorpayService {
   private razorpayLoaded = false;
   // Replace with your actual test key - this is a publishable key so it's fine in the frontend
   private readonly RAZORPAY_KEY = "rzp_test_SCBtEItlo6cdZj";
+  private readonly API_URL = process.env.NODE_ENV === 'production' 
+    ? 'https://your-production-url.vercel.app/api' 
+    : 'http://localhost:3000/api';
 
   async loadRazorpay(): Promise<boolean> {
     if (this.razorpayLoaded) return true;
@@ -28,26 +30,23 @@ class RazorpayService {
 
   async createOrder(pollId: string): Promise<{ orderId: string, amount: number }> {
     try {
-      // Create an order document in Firestore
-      const db = getFirestore();
-      const ordersRef = collection(db, "orders");
+      // Call our serverless function to create an order
+      const response = await fetch(`${this.API_URL}/create-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ pollId })
+      });
       
-      // Create the order with pending status
-      const orderData = {
-        pollId,
-        amount: 1000, // ₹10.00 in paise
-        currency: "INR",
-        status: "pending",
-        createdAt: serverTimestamp()
-      };
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create order');
+      }
       
-      // Add to Firestore
-      const orderDoc = await addDoc(ordersRef, orderData);
-      
-      // In a production environment, you would use Firebase Functions to securely create a Razorpay order
-      // and return the actual orderId from Razorpay. For this demo, we're using the Firestore document ID.
+      const orderData = await response.json();
       return {
-        orderId: orderDoc.id,
+        orderId: orderData.orderId,
         amount: orderData.amount
       };
     } catch (error) {
@@ -69,18 +68,21 @@ class RazorpayService {
         currency: "INR",
         name: "AskIt",
         description: "Pin your poll for 1 hour",
-        order_id: orderId, // In production, this would be the actual Razorpay order ID
+        order_id: orderId,
         handler: async (response: any) => {
-          // In a real app, verify this payment on the server
+          // Verify the payment
           const success = await this.verifyPayment(
-            pollId, 
-            orderId, 
-            response.razorpay_payment_id || `pay_${Math.random().toString(36).substring(2, 15)}`
+            pollId,
+            response.razorpay_order_id,
+            response.razorpay_payment_id,
+            response.razorpay_signature
           );
           
           if (success) {
             toast.success("Poll pinned successfully for 1 hour!");
             onSuccess();
+          } else {
+            toast.error("Payment verification failed");
           }
         },
         prefill: {
@@ -106,30 +108,72 @@ class RazorpayService {
     }
   }
 
-  private async verifyPayment(pollId: string, orderId: string, paymentId: string): Promise<boolean> {
+  private async verifyPayment(
+    pollId: string, 
+    razorpay_order_id: string, 
+    razorpay_payment_id: string, 
+    razorpay_signature: string
+  ): Promise<boolean> {
     try {
-      // Update the order status in Firestore
-      const db = getFirestore();
-      const orderRef = doc(db, "orders", orderId);
-      
-      // In production, this verification would happen securely in Firebase Functions
-      // Here we're just updating the order status in Firestore directly
-      await updateDoc(orderRef, {
-        status: "completed",
-        paymentId,
-        completedAt: serverTimestamp()
+      // Call our serverless function to verify the payment
+      const response = await fetch(`${this.API_URL}/verify-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          razorpay_order_id,
+          razorpay_payment_id,
+          razorpay_signature
+        })
       });
       
-      // Call the Firebase service to pin the poll
-      const updatedPoll = await firebaseService.pinPoll({
-        pollId,
-        orderId,
-        paymentId
-      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Payment verification failed');
+      }
       
-      return !!updatedPoll;
+      const verificationData = await response.json();
+      
+      if (verificationData.verified) {
+        // Payment verification succeeded, now update Firestore
+        const db = getFirestore();
+        
+        // Record the payment in Firestore
+        const paymentsRef = collection(db, "payments");
+        await addDoc(paymentsRef, {
+          pollId,
+          orderId: razorpay_order_id,
+          paymentId: razorpay_payment_id,
+          amount: 1000, // ₹10.00 in paise
+          status: "completed",
+          createdAt: serverTimestamp()
+        });
+        
+        // Update the poll with pinned status
+        const pollRef = doc(db, "polls", pollId);
+        const pollDoc = await getDoc(pollRef);
+        
+        if (pollDoc.exists()) {
+          // Calculate pin expiry time (1 hour from now)
+          const pinExpiresAt = new Date();
+          pinExpiresAt.setHours(pinExpiresAt.getHours() + 1);
+          
+          await updateDoc(pollRef, {
+            isPinned: true,
+            pinExpiresAt: serverTimestamp()
+          });
+          
+          return true;
+        } else {
+          console.error("Poll document not found");
+          return false;
+        }
+      }
+      
+      return false;
     } catch (error) {
-      console.error("Pin verification error:", error);
+      console.error("Payment verification error:", error);
       return false;
     }
   }
