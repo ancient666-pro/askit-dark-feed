@@ -20,12 +20,12 @@ import {
 
 // Firebase configuration - replace with your own Firebase project config
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY", // Replace with your Firebase API Key
-  authDomain: "YOUR_AUTH_DOMAIN", // Replace with your Firebase Auth Domain
-  projectId: "YOUR_PROJECT_ID", // Replace with your Firebase Project ID
-  storageBucket: "YOUR_STORAGE_BUCKET", // Replace with your Firebase Storage Bucket
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Replace with your Firebase Messaging Sender ID
-  appId: "YOUR_APP_ID" // Replace with your Firebase App ID
+  apiKey: "AIzaSyCOeFzbTpxxffIpVAlhQnBIOhZbdL6KhV8",
+  authDomain: "askitserver.firebaseapp.com",
+  projectId: "askitserver",
+  storageBucket: "askitserver.firebasestorage.app",
+  messagingSenderId: "438161991675",
+  appId: "1:438161991675:web:d3c65a2118e18f33e60d5e"
 };
 
 // Initialize Firebase
