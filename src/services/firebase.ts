@@ -81,7 +81,14 @@ class FirebaseService {
       });
     } catch (error) {
       console.error("Error getting polls:", error);
-      toast.error("Failed to fetch polls");
+      
+      // Handle permission denied error specifically
+      if (error.code === 'permission-denied') {
+        toast.error("Permission denied. Check your Firebase security rules.");
+      } else {
+        toast.error("Failed to fetch polls");
+      }
+      
       return [];
     }
   }
@@ -122,6 +129,10 @@ class FirebaseService {
       console.log("Sample polls created successfully");
     } catch (error) {
       console.error("Error creating sample polls:", error);
+      
+      if (error.code === 'permission-denied') {
+        toast.error("Permission denied when creating sample polls. Check your Firebase security rules.");
+      }
     }
   }
 
@@ -153,7 +164,15 @@ class FirebaseService {
       };
     } catch (error) {
       console.error("Error creating poll:", error);
-      toast.error("Failed to create poll");
+      
+      // Better error handling with specific messages
+      if (error.code === 'permission-denied') {
+        toast.error("Cannot create poll: Permission denied. Check your Firebase security rules.");
+        console.log("Update your Firestore rules to allow write operations to the 'polls' collection.");
+      } else {
+        toast.error("Failed to create poll");
+      }
+      
       throw error;
     }
   }
