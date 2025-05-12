@@ -33,10 +33,11 @@ class RazorpayService {
     try {
       console.log("Creating order with API URL:", this.API_URL);
       
-      // Ensure path is properly formatted
-      const apiUrl = this.API_URL.endsWith('/') 
-        ? `${this.API_URL}api/create-order` 
-        : `${this.API_URL}/api/create-order`;
+      // Ensure path is properly formatted for API endpoint
+      let apiUrl = `${this.API_URL}/api/create-order`;
+      
+      // Remove any double slashes in the URL except for the protocol
+      apiUrl = apiUrl.replace(/([^:]\/)\/+/g, "$1");
       
       console.log("Final API URL:", apiUrl);
       
@@ -46,12 +47,14 @@ class RazorpayService {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ pollId })
+        body: JSON.stringify({ pollId }),
+        mode: 'cors'
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create order');
+        const errorText = await response.text();
+        console.error("Error response:", errorText);
+        throw new Error(errorText || 'Failed to create order');
       }
       
       const orderData = await response.json();
@@ -125,10 +128,11 @@ class RazorpayService {
     razorpay_signature: string
   ): Promise<boolean> {
     try {
-      // Ensure path is properly formatted
-      const apiUrl = this.API_URL.endsWith('/') 
-        ? `${this.API_URL}api/verify-payment` 
-        : `${this.API_URL}/api/verify-payment`;
+      // Ensure path is properly formatted for API endpoint
+      let apiUrl = `${this.API_URL}/api/verify-payment`;
+      
+      // Remove any double slashes in the URL except for the protocol
+      apiUrl = apiUrl.replace(/([^:]\/)\/+/g, "$1");
       
       // Call our serverless function to verify the payment
       const response = await fetch(apiUrl, {
@@ -140,12 +144,14 @@ class RazorpayService {
           razorpay_order_id,
           razorpay_payment_id,
           razorpay_signature
-        })
+        }),
+        mode: 'cors'
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Payment verification failed');
+        const errorText = await response.text();
+        console.error("Verification error response:", errorText);
+        throw new Error(errorText || 'Payment verification failed');
       }
       
       const verificationData = await response.json();
