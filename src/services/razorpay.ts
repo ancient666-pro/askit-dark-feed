@@ -1,14 +1,15 @@
+
 import { toast } from "sonner";
 import { doc, getFirestore, collection, addDoc, serverTimestamp, updateDoc, getDoc } from "firebase/firestore";
 
 class RazorpayService {
   private razorpayLoaded = false;
   // Use environment variable for the publishable Razorpay key
-  private readonly RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_SCBtEItlo6cdZj";
+  private readonly RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_8tiNhEnOjiBMuA";
   private readonly API_URL = import.meta.env.VITE_API_URL || 
     (process.env.NODE_ENV === 'production' 
-      ? 'https://your-production-url.vercel.app/api' 
-      : 'http://localhost:3000/api');
+      ? 'https://askit-kappa.vercel.app' 
+      : 'http://localhost:3000');
 
   async loadRazorpay(): Promise<boolean> {
     if (this.razorpayLoaded) return true;
@@ -30,8 +31,17 @@ class RazorpayService {
 
   async createOrder(pollId: string): Promise<{ orderId: string, amount: number }> {
     try {
+      console.log("Creating order with API URL:", this.API_URL);
+      
+      // Ensure path is properly formatted
+      const apiUrl = this.API_URL.endsWith('/') 
+        ? `${this.API_URL}api/create-order` 
+        : `${this.API_URL}/api/create-order`;
+      
+      console.log("Final API URL:", apiUrl);
+      
       // Call our serverless function to create an order
-      const response = await fetch(`${this.API_URL}/create-order`, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -115,8 +125,13 @@ class RazorpayService {
     razorpay_signature: string
   ): Promise<boolean> {
     try {
+      // Ensure path is properly formatted
+      const apiUrl = this.API_URL.endsWith('/') 
+        ? `${this.API_URL}api/verify-payment` 
+        : `${this.API_URL}/api/verify-payment`;
+      
       // Call our serverless function to verify the payment
-      const response = await fetch(`${this.API_URL}/verify-payment`, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

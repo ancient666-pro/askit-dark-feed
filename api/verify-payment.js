@@ -27,6 +27,8 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Missing required payment verification parameters' });
     }
 
+    console.log('Verifying payment:', razorpay_payment_id);
+
     // Verify the payment signature
     const secret = process.env.RAZORPAY_KEY_SECRET;
     const generated_signature = crypto
@@ -35,9 +37,11 @@ module.exports = async (req, res) => {
       .digest('hex');
     
     if (generated_signature !== razorpay_signature) {
+      console.log('Signature verification failed');
       return res.status(400).json({ error: 'Payment verification failed' });
     }
 
+    console.log('Payment verified successfully');
     // Payment is verified successfully
     return res.status(200).json({ verified: true });
   } catch (error) {

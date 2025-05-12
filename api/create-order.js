@@ -27,6 +27,9 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Poll ID is required' });
     }
 
+    console.log('Creating Razorpay order for poll:', pollId);
+    console.log('Using Razorpay key:', process.env.RAZORPAY_KEY_ID);
+
     // Initialize Razorpay instance
     const razorpay = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID,
@@ -43,6 +46,7 @@ module.exports = async (req, res) => {
       }
     });
 
+    console.log('Order created successfully:', order.id);
     return res.status(200).json({
       orderId: order.id,
       amount: order.amount
