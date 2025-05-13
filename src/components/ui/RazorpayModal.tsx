@@ -25,13 +25,19 @@ const RazorpayModal = ({ poll, open, onOpenChange, onSuccess }: RazorpayModalPro
     
     setLoading(true);
     try {
+      toast.info("Initializing payment...");
+      console.log(`Starting payment for poll: ${poll.id}`);
+      
       await razorpayService.openCheckout(poll.id, () => {
         onSuccess();
         onOpenChange(false);
       });
     } catch (error) {
       console.error("Error in Razorpay checkout:", error);
-      toast.error(`Payment failed: ${error.message}`);
+      
+      // More descriptive error message
+      const errorMessage = error.message || "Unknown error";
+      toast.error(`Payment failed: ${errorMessage}. Please check console for details.`);
     } finally {
       setLoading(false);
     }

@@ -49,10 +49,16 @@ class RazorpayService {
         throw new Error("Poll ID is required");
       }
       
-      // Normalize the API URL and construct the endpoint
-      const baseUrl = this.normalizeUrl(this.API_URL);
+      // Instead of using the environment variable directly, use a hardcoded fallback
+      // This helps avoid issues with environment variables not being loaded properly
+      let baseUrl = this.normalizeUrl(this.API_URL);
+      
       if (!baseUrl) {
-        throw new Error("API URL is not configured. Check your VITE_API_URL environment variable.");
+        // Use a hardcoded fallback URL - Replace with your actual Vercel URL
+        baseUrl = 'https://askit-kop7qc8ua-ancient666-pros-projects.vercel.app';
+        console.log("Using fallback API URL:", baseUrl);
+      } else {
+        console.log("Using configured API URL:", baseUrl);
       }
       
       const apiUrl = `${baseUrl}/api/create-order`;
@@ -66,7 +72,8 @@ class RazorpayService {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ pollId }),
-        mode: 'cors'
+        mode: 'cors',
+        credentials: 'omit' // Add this line to avoid credentials issues
       });
       
       console.log("Response status:", response.status);

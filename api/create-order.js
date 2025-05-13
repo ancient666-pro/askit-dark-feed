@@ -3,10 +3,10 @@
 const Razorpay = require('razorpay');
 
 module.exports = async (req, res) => {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Credentials', true);
+  // Enable CORS - More permissive settings
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
   // Handle OPTIONS request for CORS preflight
@@ -23,6 +23,7 @@ module.exports = async (req, res) => {
   try {
     // Log the request body to help with debugging
     console.log('Request body:', JSON.stringify(req.body));
+    console.log('Request headers:', JSON.stringify(req.headers));
     
     const { pollId } = req.body;
     
