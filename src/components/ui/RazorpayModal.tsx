@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { razorpayService } from "@/services/razorpay";
 import { Poll } from "@/types/poll";
 import { ExternalLink } from "lucide-react";
+import { toast } from "sonner";
 
 interface RazorpayModalProps {
   poll: Poll | null;
@@ -17,14 +18,23 @@ const RazorpayModal = ({ poll, open, onOpenChange, onSuccess }: RazorpayModalPro
   const [loading, setLoading] = useState(false);
   
   const handleBoost = async () => {
-    if (!poll) return;
+    if (!poll) {
+      toast.error("Poll information is missing");
+      return;
+    }
     
     setLoading(true);
-    await razorpayService.openCheckout(poll.id, () => {
-      onSuccess();
-      onOpenChange(false);
-    });
-    setLoading(false);
+    try {
+      await razorpayService.openCheckout(poll.id, () => {
+        onSuccess();
+        onOpenChange(false);
+      });
+    } catch (error) {
+      console.error("Error in Razorpay checkout:", error);
+      toast.error(`Payment failed: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
   
   if (!poll) return null;

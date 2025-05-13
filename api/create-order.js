@@ -21,6 +21,9 @@ module.exports = async (req, res) => {
   }
 
   try {
+    // Log the request body to help with debugging
+    console.log('Request body:', JSON.stringify(req.body));
+    
     const { pollId } = req.body;
     
     if (!pollId) {
@@ -31,9 +34,12 @@ module.exports = async (req, res) => {
     const key_id = process.env.RAZORPAY_KEY_ID;
     const key_secret = process.env.RAZORPAY_KEY_SECRET;
     
+    // Log the key_id to verify it's being read correctly (don't log the secret!)
+    console.log('Using Razorpay key ID:', key_id);
+    
     if (!key_id || !key_secret) {
       console.error('Missing Razorpay credentials');
-      return res.status(500).json({ error: 'Server configuration error' });
+      return res.status(500).json({ error: 'Server configuration error: Missing Razorpay credentials' });
     }
     
     console.log('Creating Razorpay order for poll:', pollId);
@@ -55,9 +61,14 @@ module.exports = async (req, res) => {
     });
 
     console.log('Order created successfully:', order.id);
+    
+    // Return complete order information for debugging
     return res.status(200).json({
       orderId: order.id,
-      amount: order.amount
+      amount: order.amount,
+      currency: order.currency,
+      receipt: order.receipt,
+      status: order.status
     });
   } catch (error) {
     console.error('Error creating Razorpay order:', error);
