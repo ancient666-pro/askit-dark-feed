@@ -27,13 +27,21 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Poll ID is required' });
     }
 
+    // Get Razorpay credentials from environment variables
+    const key_id = process.env.RAZORPAY_KEY_ID;
+    const key_secret = process.env.RAZORPAY_KEY_SECRET;
+    
+    if (!key_id || !key_secret) {
+      console.error('Missing Razorpay credentials');
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+    
     console.log('Creating Razorpay order for poll:', pollId);
-    console.log('Using Razorpay key:', process.env.RAZORPAY_KEY_ID);
 
     // Initialize Razorpay instance
     const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET
+      key_id: key_id,
+      key_secret: key_secret
     });
 
     // Create an order
@@ -53,6 +61,10 @@ module.exports = async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating Razorpay order:', error);
-    return res.status(500).json({ error: 'Failed to create order', details: error.message });
+    return res.status(500).json({ 
+      error: 'Failed to create order', 
+      details: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+    });
   }
 };

@@ -29,8 +29,15 @@ module.exports = async (req, res) => {
 
     console.log('Verifying payment:', razorpay_payment_id);
 
-    // Verify the payment signature
+    // Get Razorpay secret key from environment variable
     const secret = process.env.RAZORPAY_KEY_SECRET;
+    
+    if (!secret) {
+      console.error('Missing Razorpay secret key');
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+
+    // Verify the payment signature
     const generated_signature = crypto
       .createHmac('sha256', secret)
       .update(razorpay_order_id + '|' + razorpay_payment_id)
@@ -46,6 +53,10 @@ module.exports = async (req, res) => {
     return res.status(200).json({ verified: true });
   } catch (error) {
     console.error('Error verifying Razorpay payment:', error);
-    return res.status(500).json({ error: 'Failed to verify payment' });
+    return res.status(500).json({ 
+      error: 'Failed to verify payment',
+      details: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+    });
   }
 };

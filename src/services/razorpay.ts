@@ -31,13 +31,14 @@ class RazorpayService {
 
   async createOrder(pollId: string): Promise<{ orderId: string, amount: number }> {
     try {
-      console.log("Creating order with API URL:", this.API_URL);
+      // Log the API URL to verify it's correct
+      console.log("Creating order with base API URL:", this.API_URL);
       
-      // Ensure path is properly formatted for API endpoint
-      let apiUrl = `${this.API_URL}/api/create-order`;
+      // Remove any trailing slashes from API URL
+      const baseUrl = this.API_URL.replace(/\/+$/, '');
       
-      // Remove any double slashes in the URL except for the protocol
-      apiUrl = apiUrl.replace(/([^:]\/)\/+/g, "$1");
+      // Construct final API URL
+      const apiUrl = `${baseUrl}/api/create-order`;
       
       console.log("Final API URL:", apiUrl);
       
@@ -48,32 +49,41 @@ class RazorpayService {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ pollId }),
-        mode: 'cors'
+        mode: 'cors',
+        credentials: 'same-origin'
       });
+      
+      console.log("Response status:", response.status);
       
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Error response:", errorText);
-        throw new Error(errorText || 'Failed to create order');
+        throw new Error(`Failed to create order: ${errorText || `Status ${response.status}`}`);
       }
       
       const orderData = await response.json();
+      console.log("Order created:", orderData);
       return {
         orderId: orderData.orderId,
         amount: orderData.amount
       };
     } catch (error) {
       console.error("Error creating order:", error);
-      throw new Error("Failed to create order");
+      throw new Error(`Failed to create order: ${error.message}`);
     }
   }
 
   async openCheckout(pollId: string, onSuccess: () => void): Promise<void> {
     const loaded = await this.loadRazorpay();
-    if (!loaded) return;
+    if (!loaded) {
+      toast.error("Could not load payment gateway");
+      return;
+    }
 
     try {
+      console.log("Starting payment process for poll:", pollId);
       const { orderId, amount } = await this.createOrder(pollId);
+      console.log("Got order details:", { orderId, amount });
       
       const options = {
         key: this.RAZORPAY_KEY,
@@ -83,6 +93,7 @@ class RazorpayService {
         description: "Pin your poll for 1 hour",
         order_id: orderId,
         handler: async (response: any) => {
+          console.log("Payment response received:", response);
           // Verify the payment
           const success = await this.verifyPayment(
             pollId,
@@ -111,13 +122,15 @@ class RazorpayService {
         }
       };
 
+      console.log("Opening Razorpay with options:", { ...options, key: "[REDACTED]" });
+      
       // @ts-ignore - Razorpay is loaded via script
       const razorpayInstance = new window.Razorpay(options);
       razorpayInstance.open();
       
     } catch (error) {
       console.error("Payment error:", error);
-      toast.error("Payment initialization failed");
+      toast.error(`Payment initialization failed: ${error.message}`);
     }
   }
 
@@ -128,11 +141,13 @@ class RazorpayService {
     razorpay_signature: string
   ): Promise<boolean> {
     try {
-      // Ensure path is properly formatted for API endpoint
-      let apiUrl = `${this.API_URL}/api/verify-payment`;
+      // Remove any trailing slashes from API URL
+      const baseUrl = this.API_URL.replace(/\/+$/, '');
       
-      // Remove any double slashes in the URL except for the protocol
-      apiUrl = apiUrl.replace(/([^:]\/)\/+/g, "$1");
+      // Construct verification API URL
+      const apiUrl = `${baseUrl}/api/verify-payment`;
+      
+      console.log("Verifying payment at URL:", apiUrl);
       
       // Call our serverless function to verify the payment
       const response = await fetch(apiUrl, {
@@ -145,16 +160,18 @@ class RazorpayService {
           razorpay_payment_id,
           razorpay_signature
         }),
-        mode: 'cors'
+        mode: 'cors',
+        credentials: 'same-origin'
       });
       
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Verification error response:", errorText);
-        throw new Error(errorText || 'Payment verification failed');
+        throw new Error(`Payment verification failed: ${errorText || `Status ${response.status}`}`);
       }
       
       const verificationData = await response.json();
+      console.log("Verification response:", verificationData);
       
       if (verificationData.verified) {
         // Payment verification succeeded, now update Firestore
