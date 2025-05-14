@@ -1,6 +1,6 @@
 
 import { toast } from "sonner";
-import { Poll, VoteData, PinPollData } from "@/types/poll";
+import { Poll, PollOption, VoteData } from "@/types/poll";
 import { initializeApp } from "firebase/app";
 import { 
   getFirestore, 
@@ -15,8 +15,11 @@ import {
   orderBy, 
   serverTimestamp,
   Timestamp,
+  increment,
+  limit,
   where
 } from "firebase/firestore";
+import { v4 as uuidv4 } from "uuid";
 
 // Firebase configuration - replace with your own Firebase project config
 const firebaseConfig = {
@@ -51,7 +54,9 @@ class FirebaseService {
     try {
       // First get all polls
       const pollsRef = collection(db, "polls");
-      const querySnapshot = await getDocs(pollsRef);
+      const querySnapshot = await getDocs(
+        query(pollsRef, orderBy("createdAt", "desc"))
+      );
       
       if (querySnapshot.empty) {
         // If no polls exist, let's create some sample ones
@@ -59,26 +64,29 @@ class FirebaseService {
         return this.getPolls();
       }
       
-      // Convert the documents to Poll objects
-      const polls = querySnapshot.docs.map(doc => {
+      // Convert the documents to Poll objects and calculate votesPerHour
+      const polls = await Promise.all(querySnapshot.docs.map(async (doc) => {
         const data = doc.data();
+        const options = data.options || [];
+        const totalVotes = options.reduce((sum: number, option: PollOption) => sum + option.votes, 0);
+        
+        // Calculate votes per hour (for trending)
+        const createdAtTimestamp = data.createdAt?.toMillis() || Date.now();
+        const hoursElapsed = Math.max(1, (Date.now() - createdAtTimestamp) / (1000 * 60 * 60));
+        const votesPerHour = totalVotes / hoursElapsed;
+        
         return {
           id: doc.id,
           question: data.question,
           type: data.type,
-          createdAt: data.createdAt.toMillis(),
-          isPinned: data.isPinned || false,
-          pinExpiresAt: data.pinExpiresAt?.toMillis() || null,
-          votes: data.votes
+          createdAt: createdAtTimestamp,
+          options: options,
+          totalVotes: totalVotes,
+          votesPerHour: votesPerHour
         } as Poll;
-      });
+      }));
       
-      // Sort by pin status (pinned first) then by creation time (newest first)
-      return polls.sort((a, b) => {
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-        return b.createdAt - a.createdAt;
-      });
+      return polls;
     } catch (error) {
       console.error("Error getting polls:", error);
       
@@ -93,6 +101,25 @@ class FirebaseService {
     }
   }
 
+  async getTrendingPolls(count: number = 10): Promise<Poll[]> {
+    try {
+      const polls = await this.getPolls();
+      
+      // Sort by votesPerHour (most votes per hour first)
+      return polls
+        .sort((a, b) => (b.votesPerHour || 0) - (a.votesPerHour || 0))
+        .slice(0, count);
+    } catch (error) {
+      console.error("Error getting trending polls:", error);
+      toast.error("Failed to fetch trending polls");
+      return [];
+    }
+  }
+
+  async getTopTrendingPolls(count: number = 3): Promise<Poll[]> {
+    return this.getTrendingPolls(count);
+  }
+
   private async createSamplePolls(): Promise<void> {
     try {
       const pollsRef = collection(db, "polls");
@@ -101,24 +128,30 @@ class FirebaseService {
         {
           question: "Should remote work be the new normal?",
           type: "yesNo",
-          createdAt: Timestamp.fromMillis(Date.now() - 3600000),
-          isPinned: true,
-          pinExpiresAt: Timestamp.fromMillis(Date.now() + 3600000),
-          votes: { yes: 42, no: 18 }
+          createdAt: Timestamp.fromMillis(Date.now() - 3600000), // 1 hour ago
+          options: [
+            { id: "yes", text: "Yes", votes: 42 },
+            { id: "no", text: "No", votes: 18 }
+          ]
         },
         {
           question: "Which is better for productivity?",
-          type: "optionAB",
-          createdAt: Timestamp.fromMillis(Date.now() - 7200000),
-          isPinned: false,
-          votes: { optionA: 24, optionB: 31 }
+          type: "customOptions",
+          createdAt: Timestamp.fromMillis(Date.now() - 7200000), // 2 hours ago
+          options: [
+            { id: uuidv4(), text: "Working from home", votes: 24 },
+            { id: uuidv4(), text: "Working from office", votes: 31 },
+            { id: uuidv4(), text: "Hybrid model", votes: 45 }
+          ]
         },
         {
           question: "Do you prefer dark mode over light mode?",
           type: "yesNo",
-          createdAt: Timestamp.fromMillis(Date.now() - 10800000),
-          isPinned: false,
-          votes: { yes: 76, no: 12 }
+          createdAt: Timestamp.fromMillis(Date.now() - 10800000), // 3 hours ago
+          options: [
+            { id: "yes", text: "Yes", votes: 76 },
+            { id: "no", text: "No", votes: 12 }
+          ]
         }
       ];
       
@@ -136,7 +169,7 @@ class FirebaseService {
     }
   }
 
-  async createPoll(question: string, type: "yesNo" | "optionAB"): Promise<Poll> {
+  async createPoll(question: string, type: "yesNo" | "customOptions", options: PollOption[]): Promise<Poll> {
     try {
       const pollsRef = collection(db, "polls");
       
@@ -144,8 +177,7 @@ class FirebaseService {
         question,
         type,
         createdAt: serverTimestamp(),
-        isPinned: false,
-        votes: type === "yesNo" ? { yes: 0, no: 0 } : { optionA: 0, optionB: 0 }
+        options
       };
       
       const docRef = await addDoc(pollsRef, newPoll);
@@ -159,16 +191,14 @@ class FirebaseService {
         question,
         type,
         createdAt: data?.createdAt?.toMillis() || Date.now(),
-        isPinned: false,
-        votes: type === "yesNo" ? { yes: 0, no: 0 } : { optionA: 0, optionB: 0 }
+        options,
+        totalVotes: 0
       };
     } catch (error) {
       console.error("Error creating poll:", error);
       
-      // Better error handling with specific messages
       if (error.code === 'permission-denied') {
         toast.error("Cannot create poll: Permission denied. Check your Firebase security rules.");
-        console.log("Update your Firestore rules to allow write operations to the 'polls' collection.");
       } else {
         toast.error("Failed to create poll");
       }
@@ -177,7 +207,7 @@ class FirebaseService {
     }
   }
 
-  async votePoll({ pollId, vote }: VoteData): Promise<Poll | null> {
+  async votePoll({ pollId, optionId }: VoteData): Promise<Poll | null> {
     try {
       const votedPolls = localStorage.getItem("votedPolls") ? 
         JSON.parse(localStorage.getItem("votedPolls") || "{}") : {};
@@ -196,28 +226,41 @@ class FirebaseService {
       }
       
       const pollData = pollSnap.data();
-      const updatedVotes = { ...pollData.votes };
+      const options = [...(pollData.options || [])];
       
-      // Update vote count
-      if (updatedVotes[vote] !== undefined) {
-        updatedVotes[vote] = (updatedVotes[vote] || 0) + 1;
+      // Find the option to update
+      const optionIndex = options.findIndex(opt => opt.id === optionId);
+      if (optionIndex === -1) {
+        toast.error("Option not found");
+        return null;
       }
       
+      // Update vote count for the selected option
+      options[optionIndex].votes = (options[optionIndex].votes || 0) + 1;
+      
       // Update poll in Firestore
-      await updateDoc(pollRef, { votes: updatedVotes });
+      await updateDoc(pollRef, { options });
       
       // Mark poll as voted for this device
-      votedPolls[pollId] = true;
+      votedPolls[pollId] = optionId;
       localStorage.setItem("votedPolls", JSON.stringify(votedPolls));
+      
+      // Calculate total votes
+      const totalVotes = options.reduce((sum, opt) => sum + (opt.votes || 0), 0);
+      
+      // Calculate votes per hour
+      const createdAtTimestamp = pollData.createdAt?.toMillis() || Date.now();
+      const hoursElapsed = Math.max(1, (Date.now() - createdAtTimestamp) / (1000 * 60 * 60));
+      const votesPerHour = totalVotes / hoursElapsed;
       
       const updatedPoll = {
         id: pollId,
         question: pollData.question,
         type: pollData.type,
-        createdAt: pollData.createdAt.toMillis(),
-        isPinned: pollData.isPinned || false,
-        pinExpiresAt: pollData.pinExpiresAt?.toMillis() || null,
-        votes: updatedVotes
+        createdAt: createdAtTimestamp,
+        options: options,
+        totalVotes: totalVotes,
+        votesPerHour: votesPerHour
       };
       
       return updatedPoll;
@@ -228,83 +271,16 @@ class FirebaseService {
     }
   }
 
-  async pinPoll({ pollId, orderId, paymentId }: PinPollData): Promise<Poll | null> {
-    try {
-      const pollRef = doc(db, "polls", pollId);
-      const pollSnap = await getDoc(pollRef);
-      
-      if (!pollSnap.exists()) {
-        toast.error("Poll not found");
-        return null;
-      }
-      
-      // Create payment record in Firestore
-      const paymentRef = collection(db, "payments");
-      await addDoc(paymentRef, {
-        pollId,
-        orderId,
-        paymentId,
-        amount: 1000, // ₹10.00 in paise
-        createdAt: serverTimestamp(),
-        status: "completed"
-      });
-      
-      // Update poll with pinned status
-      const pinExpiresAt = Timestamp.fromMillis(Date.now() + 3600000); // 1 hour from now
-      await updateDoc(pollRef, {
-        isPinned: true,
-        pinExpiresAt
-      });
-      
-      // Get updated poll data
-      const updatedPollSnap = await getDoc(pollRef);
-      const updatedPollData = updatedPollSnap.data();
-      
-      return {
-        id: pollId,
-        question: updatedPollData.question,
-        type: updatedPollData.type,
-        createdAt: updatedPollData.createdAt.toMillis(),
-        isPinned: true,
-        pinExpiresAt: pinExpiresAt.toMillis(),
-        votes: updatedPollData.votes
-      };
-    } catch (error) {
-      console.error("Error pinning poll:", error);
-      toast.error("Failed to pin poll");
-      return null;
-    }
-  }
-
-  async cleanExpiredPins(): Promise<void> {
-    try {
-      const now = Timestamp.now();
-      const pollsRef = collection(db, "polls");
-      
-      // Query for pinned polls with expired pins
-      const q = query(
-        pollsRef,
-        where("isPinned", "==", true),
-        where("pinExpiresAt", "<", now)
-      );
-      
-      const expiredPinsSnapshot = await getDocs(q);
-      
-      // Update each expired pin
-      expiredPinsSnapshot.forEach(async (document) => {
-        await updateDoc(doc(db, "polls", document.id), {
-          isPinned: false
-        });
-      });
-    } catch (error) {
-      console.error("Error cleaning expired pins:", error);
-    }
-  }
-
   hasVoted(pollId: string): boolean {
     const votedPolls = localStorage.getItem("votedPolls") ? 
       JSON.parse(localStorage.getItem("votedPolls") || "{}") : {};
     return !!votedPolls[pollId];
+  }
+
+  getVotedOption(pollId: string): string | null {
+    const votedPolls = localStorage.getItem("votedPolls") ? 
+      JSON.parse(localStorage.getItem("votedPolls") || "{}") : {};
+    return votedPolls[pollId] || null;
   }
 }
 

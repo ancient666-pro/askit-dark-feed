@@ -35,7 +35,7 @@
     --input: 240 10% 20%;
     --ring: 255 60% 75%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
   }
 }
 
@@ -46,16 +46,24 @@
   body {
     @apply bg-background text-foreground font-sans;
     font-family: 'Inter', sans-serif;
+    background-image: radial-gradient(circle at 50% 50%, rgba(155, 135, 245, 0.1) 0%, transparent 70%);
   }
 }
 
 @layer utilities {
   .glass-card {
     @apply bg-card/90 backdrop-blur-sm border border-white/10;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   }
   
   .poll-card-shadow {
-    box-shadow: 0 4px 12px rgba(155, 135, 245, 0.15);
+    box-shadow: 0 8px 24px rgba(155, 135, 245, 0.15);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  }
+  
+  .poll-card-shadow:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(155, 135, 245, 0.25);
   }
   
   .poll-option {
@@ -66,7 +74,25 @@
     @apply absolute top-0 left-0 h-full bg-primary/20 transition-all duration-300 ease-out z-0;
   }
   
-  .poll-pin {
-    @apply absolute -rotate-45 top-2 right-2 text-amber-400;
+  .text-gradient {
+    @apply bg-gradient-to-br from-white via-white/90 to-white/70 bg-clip-text text-transparent;
   }
+  
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+  }
+  
+  .glassmorphism {
+    @apply backdrop-blur-md bg-white/5 border border-white/10;
+  }
+}
+
+.header-glow {
+  text-shadow: 0 0 10px rgba(155, 135, 245, 0.7);
 }

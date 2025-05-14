@@ -1,28 +1,23 @@
 
-export type PollType = "yesNo" | "optionAB";
+export type PollType = "yesNo" | "customOptions";
+
+export interface PollOption {
+  id: string;
+  text: string;
+  votes: number;
+}
 
 export interface Poll {
   id: string;
   question: string;
   type: PollType;
   createdAt: number; // timestamp
-  isPinned: boolean;
-  pinExpiresAt?: number; // timestamp when pin expires
-  votes: {
-    yes?: number;
-    no?: number;
-    optionA?: number;
-    optionB?: number;
-  };
+  options: PollOption[]; // For both yesNo and customOptions types
+  totalVotes: number;
+  votesPerHour?: number; // For trending calculation
 }
 
 export interface VoteData {
   pollId: string;
-  vote: "yes" | "no" | "optionA" | "optionB";
-}
-
-export interface PinPollData {
-  pollId: string;
-  orderId: string;
-  paymentId: string;
+  optionId: string;
 }
