@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Poll } from "@/types/poll";
 import { firebaseService } from "@/services/firebase";
 import { toast } from "sonner";
-import { BarChart2, Clock, Users } from "lucide-react";
+import { BarChart2, Clock, TrendingUp, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface PollCardProps {
@@ -18,6 +18,16 @@ const PollCard = ({ poll, isTrending = false, rank, onPollUpdate }: PollCardProp
   const [isVoting, setIsVoting] = useState(false);
   const hasVoted = firebaseService.hasVoted(poll.id);
   const votedOptionId = firebaseService.getVotedOption(poll.id);
+  
+  // Get color based on rank
+  const getRankColor = (rank: number) => {
+    switch(rank) {
+      case 0: return "bg-gradient-to-r from-amber-300 to-yellow-500 border-amber-400";
+      case 1: return "bg-gradient-to-r from-gray-300 to-gray-400 border-gray-400";
+      case 2: return "bg-gradient-to-r from-amber-700 to-amber-600 border-amber-700";
+      default: return "bg-primary text-primary-foreground";
+    }
+  };
   
   const formatTime = (timestamp: number) => {
     const seconds = Math.floor((Date.now() - timestamp) / 1000);
@@ -67,19 +77,37 @@ const PollCard = ({ poll, isTrending = false, rank, onPollUpdate }: PollCardProp
       hasVoted ? 'border-primary/30' : ''
     )}>
       {isTrending && rank !== undefined && (
-        <div className="absolute top-0 left-0 bg-primary text-primary-foreground font-bold px-4 py-1 rounded-br-lg">
-          #{rank + 1}
+        <div className={cn(
+          "absolute top-0 left-0 px-4 py-1 rounded-br-lg font-bold text-xs shadow-md", 
+          getRankColor(rank)
+        )}>
+          <span className={cn(
+            "relative z-10",
+            rank === 0 ? "animate-pulse text-black" : 
+            rank === 1 ? "text-black" : 
+            rank === 2 ? "text-white" : ""
+          )}>
+            #{rank + 1}
+          </span>
+          <div className={cn(
+            "absolute inset-0 opacity-30",
+            rank === 0 ? "shine-gold" : 
+            rank === 1 ? "shine-silver" : 
+            rank === 2 ? "shine-bronze" : ""
+          )}></div>
         </div>
       )}
       
       {isTrending && (
-        <div className="absolute top-2 right-2 flex items-center text-amber-400">
-          <BarChart2 className="h-4 w-4 mr-1" />
-          <span className="text-xs font-medium">Trending</span>
+        <div className="absolute top-0 right-0 flex items-center p-2 animate-pulse">
+          <div className="trending-animation mr-1">
+            <TrendingUp className="h-4 w-4 text-green-400" />
+          </div>
+          <span className="text-xs font-medium text-green-400">Trending</span>
         </div>
       )}
       
-      <CardContent className="p-5">
+      <CardContent className="p-5 pt-8">
         <div className="mb-4">
           <p className="text-lg font-medium">{poll.question}</p>
           <div className="flex items-center justify-between mt-2">

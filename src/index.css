@@ -91,6 +91,48 @@
   .glassmorphism {
     @apply backdrop-blur-md bg-white/5 border border-white/10;
   }
+  
+  .trending-animation {
+    animation: trending-flow 1.5s ease-in-out infinite;
+  }
+  
+  @keyframes trending-flow {
+    0% { transform: translateY(2px); opacity: 0.7; }
+    50% { transform: translateY(-2px); opacity: 1; }
+    100% { transform: translateY(2px); opacity: 0.7; }
+  }
+  
+  .trending-icon {
+    animation: pulse-glow 2s infinite;
+  }
+  
+  @keyframes pulse-glow {
+    0%, 100% { filter: drop-shadow(0 0 2px rgba(155, 135, 245, 0.5)); }
+    50% { filter: drop-shadow(0 0 8px rgba(155, 135, 245, 0.8)); }
+  }
+  
+  .shine-gold {
+    background: linear-gradient(45deg, rgba(255,215,0,0.5) 0%, rgba(255,255,255,0.8) 50%, rgba(255,215,0,0.5) 100%);
+    animation: shine 2s linear infinite;
+    background-size: 200% 200%;
+  }
+  
+  .shine-silver {
+    background: linear-gradient(45deg, rgba(192,192,192,0.5) 0%, rgba(255,255,255,0.8) 50%, rgba(192,192,192,0.5) 100%);
+    animation: shine 2s linear infinite;
+    background-size: 200% 200%;
+  }
+  
+  .shine-bronze {
+    background: linear-gradient(45deg, rgba(176,141,87,0.5) 0%, rgba(255,255,255,0.8) 50%, rgba(176,141,87,0.5) 100%);
+    animation: shine 2s linear infinite;
+    background-size: 200% 200%;
+  }
+  
+  @keyframes shine {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 200% 200%; }
+  }
 }
 
 .header-glow {

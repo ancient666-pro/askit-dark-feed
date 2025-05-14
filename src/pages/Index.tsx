@@ -62,8 +62,8 @@ const TrendingPolls = () => {
             {topTrending.length > 0 && (
               <div className="mb-8">
                 <div className="mb-4 flex items-center">
-                  <TrendingUp className="h-5 w-5 text-primary mr-2" />
-                  <h2 className="text-xl font-bold text-primary">Hot Right Now</h2>
+                  <TrendingUp className="h-5 w-5 text-primary mr-2 trending-icon" />
+                  <h2 className="text-xl font-bold text-gradient bg-gradient-to-r from-primary to-primary/70">Hot Right Now</h2>
                 </div>
                 
                 <div className="grid gap-4 md:grid-cols-3">
