@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -93,17 +92,42 @@
   }
   
   .trending-animation {
-    animation: trending-flow 1.5s ease-in-out infinite;
+    animation: trending-rise 1.5s ease-in-out infinite;
+    opacity: 0;
   }
   
-  @keyframes trending-flow {
-    0% { transform: translateY(2px); opacity: 0.7; }
-    50% { transform: translateY(-2px); opacity: 1; }
-    100% { transform: translateY(2px); opacity: 0.7; }
+  @keyframes trending-rise {
+    0% { transform: translateY(10px); opacity: 0; }
+    50% { transform: translateY(0px); opacity: 1; }
+    100% { transform: translateY(-10px); opacity: 0; }
   }
   
   .trending-icon {
+    position: relative;
     animation: pulse-glow 2s infinite;
+  }
+  
+  .trending-icon::before,
+  .trending-icon::after {
+    content: "";
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    left: 0;
+    top: 0;
+    background: inherit;
+    border-radius: inherit;
+    opacity: 0;
+  }
+  
+  .trending-icon::before {
+    animation: trending-rise 1.5s ease-in-out infinite;
+    animation-delay: 0.3s;
+  }
+  
+  .trending-icon::after {
+    animation: trending-rise 1.5s ease-in-out infinite;
+    animation-delay: 0.6s;
   }
   
   @keyframes pulse-glow {
