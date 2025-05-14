@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Poll } from "@/types/poll";
@@ -99,16 +98,14 @@ const PollCard = ({ poll, isTrending = false, rank, onPollUpdate }: PollCardProp
       )}
       
       {isTrending && (
-        <div className="absolute top-0 right-0 flex items-center p-2">
-          <div className="flex flex-col items-center">
-            <div className="trending-icon relative h-5 w-5">
-              <TrendingUp className="h-5 w-5 text-green-400 relative z-10" />
-              <TrendingUp className="trending-animation absolute h-5 w-5 text-green-400 top-0 left-0" />
-              <TrendingUp className="trending-animation absolute h-5 w-5 text-green-400 top-0 left-0" style={{animationDelay: '0.5s'}} />
-              <TrendingUp className="trending-animation absolute h-5 w-5 text-green-400 top-0 left-0" style={{animationDelay: '1s'}} />
-            </div>
-            <span className="text-xs font-medium text-green-400 mt-1">Trending</span>
+        <div className="absolute top-0 right-0 flex items-center gap-1 p-2">
+          <div className="trending-icon relative h-5 w-5">
+            <TrendingUp className="h-5 w-5 text-green-400 relative z-10" />
+            <TrendingUp className="trending-animation absolute h-5 w-5 text-green-400 top-0 left-0" />
+            <TrendingUp className="trending-animation absolute h-5 w-5 text-green-400 top-0 left-0" style={{animationDelay: '0.5s'}} />
+            <TrendingUp className="trending-animation absolute h-5 w-5 text-green-400 top-0 left-0" style={{animationDelay: '1s'}} />
           </div>
+          <span className="text-xs font-medium text-green-400">Trending</span>
         </div>
       )}
       
