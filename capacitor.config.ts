@@ -2,8 +2,8 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.2178aed1a3e747ffa5b8abc2065128cd',
-  appName: 'askit',
+  appId: 'com.ancient.askit',
+  appName: 'AskIt',
   webDir: 'dist',
   server: {
     url: 'https://2178aed1-a3e7-47ff-a5b8-abc2065128cd.lovableproject.com?forceHideBadge=true',
