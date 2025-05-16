@@ -157,6 +157,43 @@
     0% { background-position: 0% 0%; }
     100% { background-position: 200% 200%; }
   }
+  
+  /* Shimmer Title Animation */
+  .shimmer-title {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--primary)) 0%,
+      #fff 50%,
+      hsl(var(--primary)) 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer-move 2s infinite linear;
+    background-clip: text;
+    text-fill-color: transparent;
+    position: relative;
+    outline: none;
+  }
+
+  @keyframes shimmer-move {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* Hide all custom scrollbars for a more minimal look */
+  ::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    background: transparent !important;
+  }
+  html {
+    scrollbar-width: none !important;
+  }
 }
 
 .header-glow {
