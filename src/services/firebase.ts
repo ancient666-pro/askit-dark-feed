@@ -21,14 +21,14 @@ import {
 } from "firebase/firestore";
 import { v4 as uuidv4 } from "uuid";
 
-// Firebase configuration - replace with your own Firebase project config
+// Firebase configuration - updated with new project credentials
 const firebaseConfig = {
-  apiKey: "AIzaSyCOeFzbTpxxffIpVAlhQnBIOhZbdL6KhV8",
-  authDomain: "askitserver.firebaseapp.com",
-  projectId: "askitserver",
-  storageBucket: "askitserver.firebasestorage.app",
-  messagingSenderId: "438161991675",
-  appId: "1:438161991675:web:d3c65a2118e18f33e60d5e"
+  apiKey: "AIzaSyC1htoK1Qx-mfpzVS3Xoal4QlutgcA8bTo",
+  authDomain: "askit-1fb13.firebaseapp.com",
+  projectId: "askit-1fb13",
+  storageBucket: "askit-1fb13.firebasestorage.app",
+  messagingSenderId: "796304444391",
+  appId: "1:796304444391:web:a29192bd2e7a04dde4cb42"
 };
 
 // Initialize Firebase
@@ -52,20 +52,25 @@ class FirebaseService {
 
   async getPolls(): Promise<Poll[]> {
     try {
+      console.log("Fetching polls from Firebase...");
+      
       // First get all polls
       const pollsRef = collection(db, "polls");
       const querySnapshot = await getDocs(
         query(pollsRef, orderBy("createdAt", "desc"))
       );
       
+      console.log("Query snapshot size:", querySnapshot.size);
+      
       if (querySnapshot.empty) {
+        console.log("No polls found, creating sample polls...");
         // If no polls exist, let's create some sample ones
         await this.createSamplePolls();
         return this.getPolls();
       }
       
       // Convert the documents to Poll objects and calculate votesPerHour
-      const polls = await Promise.all(querySnapshot.docs.map(async (doc) => {
+      const polls = querySnapshot.docs.map((doc) => {
         const data = doc.data();
         const options = data.options || [];
         const totalVotes = options.reduce((sum: number, option: PollOption) => sum + option.votes, 0);
@@ -84,8 +89,9 @@ class FirebaseService {
           totalVotes: totalVotes,
           votesPerHour: votesPerHour
         } as Poll;
-      }));
+      });
       
+      console.log("Successfully fetched polls:", polls.length);
       return polls;
     } catch (error) {
       console.error("Error getting polls:", error);
@@ -122,6 +128,7 @@ class FirebaseService {
 
   private async createSamplePolls(): Promise<void> {
     try {
+      console.log("Creating sample polls...");
       const pollsRef = collection(db, "polls");
       
       const samplePolls = [
