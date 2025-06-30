@@ -2,28 +2,54 @@
 import { useEffect, useState } from "react";
 import Header from "@/components/layout/Header";
 import PollCard from "@/components/polls/PollCard";
+import WelcomeDialog from "@/components/dialogs/WelcomeDialog";
 import { Poll } from "@/types/poll";
 import { firebaseService } from "@/services/firebase";
-import { Loader2, TrendingUp } from "lucide-react";
+import { Loader2, TrendingUp, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const TrendingPolls = () => {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [topTrending, setTopTrending] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
   
   useEffect(() => {
+    // Show welcome dialog for first-time visitors
+    const hasVisited = localStorage.getItem('askit-visited');
+    if (!hasVisited) {
+      setShowWelcome(true);
+      localStorage.setItem('askit-visited', 'true');
+    }
+
     const fetchPolls = async () => {
       try {
-        // Get all polls
-        const fetchedPolls = await firebaseService.getPolls();
+        console.log("Starting to fetch polls...");
+        setError(null);
+        
+        // Add timeout to prevent infinite loading
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timeout')), 10000)
+        );
+        
+        // Get all polls with timeout
+        const pollsPromise = firebaseService.getPolls();
+        const fetchedPolls = await Promise.race([pollsPromise, timeoutPromise]) as Poll[];
+        
+        console.log("Fetched polls:", fetchedPolls);
         setPolls(fetchedPolls);
         
         // Get top trending polls
         const top3Trending = await firebaseService.getTopTrendingPolls(3);
+        console.log("Fetched trending polls:", top3Trending);
         setTopTrending(top3Trending);
+        
       } catch (error) {
         console.error("Error fetching polls:", error);
+        setError(error instanceof Error ? error.message : "Failed to load polls");
       } finally {
         setLoading(false);
       }
@@ -46,15 +72,37 @@ const TrendingPolls = () => {
       return prev;
     });
   };
+
+  const retryFetch = () => {
+    setLoading(true);
+    setError(null);
+    // Trigger re-fetch by updating a key state
+    window.location.reload();
+  };
   
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       
+      <WelcomeDialog open={showWelcome} onOpenChange={setShowWelcome} />
+      
       <main className="flex-1 px-4 py-6 max-w-3xl mx-auto w-full">
         {loading ? (
-          <div className="flex justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-12 space-y-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Loading polls...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-12 space-y-4">
+            <Alert className="max-w-md">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {error}
+              </AlertDescription>
+            </Alert>
+            <Button onClick={retryFetch} variant="outline">
+              Try Again
+            </Button>
           </div>
         ) : (
           <>
@@ -99,6 +147,13 @@ const TrendingPolls = () => {
               ) : (
                 <Card className="p-8 text-center text-muted-foreground">
                   <p>No polls available. Be the first to create one!</p>
+                  <Button 
+                    onClick={() => setShowWelcome(true)} 
+                    variant="link" 
+                    className="mt-2"
+                  >
+                    Learn more about AskIt
+                  </Button>
                 </Card>
               )}
             </div>
