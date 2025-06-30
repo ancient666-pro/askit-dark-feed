@@ -18,11 +18,13 @@ const TrendingPolls = () => {
   const [showWelcome, setShowWelcome] = useState(false);
   
   useEffect(() => {
-    // Show welcome dialog for first-time visitors
+    // Check if user has visited before and show welcome dialog
     const hasVisited = localStorage.getItem('askit-visited');
+    console.log("Has visited before:", hasVisited);
+    
     if (!hasVisited) {
+      console.log("First time visitor - showing welcome dialog");
       setShowWelcome(true);
-      localStorage.setItem('askit-visited', 'true');
     }
 
     const fetchPolls = async () => {
@@ -57,6 +59,12 @@ const TrendingPolls = () => {
     
     fetchPolls();
   }, []);
+
+  const handleWelcomeClose = () => {
+    console.log("Welcome dialog closed - marking as visited");
+    setShowWelcome(false);
+    localStorage.setItem('askit-visited', 'true');
+  };
   
   const handlePollUpdate = (updatedPoll: Poll) => {
     // Update both regular polls and top trending polls
@@ -84,7 +92,7 @@ const TrendingPolls = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       
-      <WelcomeDialog open={showWelcome} onOpenChange={setShowWelcome} />
+      <WelcomeDialog open={showWelcome} onOpenChange={handleWelcomeClose} />
       
       <main className="flex-1 px-4 py-6 max-w-3xl mx-auto w-full">
         {loading ? (
